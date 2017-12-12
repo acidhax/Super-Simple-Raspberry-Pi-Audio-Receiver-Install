@@ -2,6 +2,7 @@
 # Prompt User for Installation
 # Sets Log File
 log="./install.log"
+volumio_log="./volumio.log"
 # Begins Logging
 currentDir=$(
   cd $(dirname "$0")
@@ -30,25 +31,58 @@ while [ $Install != "1" ] && [ $Install != "2" ] && [ $Install != "3" ] && [ $In
 do
 read -p "Which installation would you like to choose? (1/2/3/4/5/6) : " Install
 # Car Installation - Previously Raspberry Pi Audio Receiver Install Car Install
+Volumio="n"
 if [ $Install = "1" ]
 then
 	AirPlay="y"
 	Bluetooth="y"
 	AP="y"
-	Kodi="y"
-	Lirc="y"
+	Kodi="n"
+	Lirc="n"
 	SoundCardInstall="y"
 	GMedia="n"
+	Kodi="Kodi"
+        while [ $Kodi != "y" ] && [ $Kodi != "n" ];
+        do
+                read -p "Do you want Kodi installed? (y/n) : " Kodi
+        done
+        # Prompts the User to use Lirc for Infrared Remote Support (matricom IR remote already setup for use with Kodi)
+        Lirc="Lirc"
+        while [ $Lirc != "y" ] && [ $Lirc != "n" ];
+        do
+                read -p "Do you want to use infrared remotes? (y/n) : " Lirc
+        done
+        GMedia="GMedia"
+        while [ $GMedia != "y" ] && [ $GMedia != "n" ];
+        do
+                read -p "Do you want to setup device as a UPnP Renderer? (y/n) : " GMedia
+        done
 # Home Installation - Previously Raspberry Pi Audio Receiver Install
 elif [ $Install = "2" ]
 then
         AirPlay="y"
         Bluetooth="y"
         AP="n"
-        Kodi="y"
-        Lirc="y"
+        Kodi="n"
+        Lirc="n"
 	SoundCardInstall="y"
-	GMedia="y"
+	GMedia="n"
+	Kodi="Kodi"
+        while [ $Kodi != "y" ] && [ $Kodi != "n" ];
+        do
+                read -p "Do you want Kodi installed? (y/n) : " Kodi
+        done
+        # Prompts the User to use Lirc for Infrared Remote Support (matricom IR remote already setup for use with Kodi)
+        Lirc="Lirc"
+        while [ $Lirc != "y" ] && [ $Lirc != "n" ];
+        do
+                read -p "Do you want to use infrared remotes? (y/n) : " Lirc
+        done
+        GMedia="GMedia"
+        while [ $GMedia != "y" ] && [ $GMedia != "n" ];
+        do
+                read -p "Do you want to setup device as a UPnP Renderer? (y/n) : " GMedia
+        done
 # Access Point Install - Previously Network Without Internet
 elif [ $Install = "3" ]
 then
@@ -61,6 +95,11 @@ then
 	
 elif [ $Install = "4" ]
 then
+	Volumio="Volumio"
+	while [ $Volumio != "y" ] && [ $Volumio != "n" ];
+        do
+                read -p "Are you running a Volumio distro? (y/n): " Volumio
+        done
 	AirPlay="n"
 	Bluetooth="y"
 	AP="n"
@@ -108,6 +147,14 @@ then
 		read -p "Do you want Bluetooth A2DP Enabled? (y/n) : " Bluetooth
 
 	done
+	if [ $Bluetooth = "y" ]
+	then
+		Volumio="Volumio"
+        	while [ $Volumio != "y" ] && [ $Volumio != "n" ];
+        	do
+                	read -p "Are you running a Volumio distro? (y/n): " Volumio
+        	done
+	fi
 	# Prompts the User to use the Raspberry Pi as an Access Point to create a network (needed for AirPlay when no existing network exists)
 	AP="AP"
 	while [ $AP != "y" ] && [ $AP != "n" ];
@@ -126,16 +173,17 @@ then
 	do
 		read -p "Do you want to use infrared remotes? (y/n) : " Lirc
 	done
-	SoundCardInstall="SoundCardInstall"
-	while [ $SoundCardInstall != "y" ] && [ $SoundCardInstall != "n" ];
-	do
-		read -p "Do you want to use a Sound Card? (y/n) : " SoundCardInstall
-	done
 	GMedia="GMedia"
 	while [ $GMedia != "y" ] && [ $GMedia != "n" ];
 	do
 		read -p "Do you want to setup device as a UPnP Renderer? (y/n) : " GMedia
 	done
+	SoundCardInstall="SoundCardInstall"
+	while [ $SoundCardInstall != "y" ] && [ $SoundCardInstall != "n" ];
+	do
+		read -p "Do you want to use a Sound Card? (y/n) : " SoundCardInstall
+	done
+	
 else
 	echo "Please choose a valid choice"
 fi
@@ -237,7 +285,12 @@ echo "--------------------------------------------" | tee -a $log
 tst ./bt_pa_prep.sh | tee -a $log
 echo "--------------------------------------------" | tee -a $log
 # If Bluetooth is Chosen, it installs Bluetooth Dependencies and issues commands for proper configuration
-
+if [ $Volumio = "y" ]
+then
+	echo "--------------------------------------------" | tee -a $log
+	echo "----------Installing Volumio Deps-----------" | tee -a $log
+	tst su ${user} -c ./volumion_fix.sh | tee -a $volumio_log
+fi
 if [ $Bluetooth = "y" ]
 then
 	tst ./bt_pa_install.sh | tee -a $log
@@ -296,6 +349,7 @@ then
 fi
 echo "Ending at @ `date`" | tee -a $log
 cat << EOT > install_choices
+Run as : $user
 Bluetooth = $Bluetooth
 AirPlay = $AirPlay
 AP = $AP
@@ -303,5 +357,22 @@ Kodi = $Kodi
 Lirc = $Lirc
 SoundCardInstall = $SoundCardInstall
 GMedia = $GMedia
+Volumio = $Volumio
 EOT
-reboot
+REBOOT="REBOOT"
+while [ $REBOOT != "y" ] && [ $REBOOT != "n" ];
+do
+	read -p "Would you like to reboot? (y/n) :" REBOOT
+done
+if [ $Volumio = "y" ]
+then
+	echo "============ VOLUMIO USERS!!! ==============="
+	echo "It is suggested that you run 'sudo /usr/bin/hciattach /dev/ttyAMA0 bcm43xx 921600 noflow -' until this command is added to the install script in a reliable way"
+	echo "============================================="
+fi
+if [ $REBOOT = "y" ]
+then
+	reboot
+else
+	echo "It is suggested you reboot for changes to take effect"
+fi
