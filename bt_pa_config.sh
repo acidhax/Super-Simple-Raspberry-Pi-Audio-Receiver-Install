@@ -28,7 +28,7 @@ function tst {
 
 
 
-mkdir /home/pi/pyScripts
+
 tst sudo cp usr/local/bin/volume-watcher.py /usr/local/bin/volume-watcher.py
 tst sudo chmod +x /usr/local/bin/volume-watcher.py
 tst sudo cp lib/systemd/system/volume-watcher.service /lib/systemd/system/volume-watcher.service
